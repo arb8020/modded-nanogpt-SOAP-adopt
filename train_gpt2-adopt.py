@@ -13,7 +13,7 @@ import torch._inductor.config as config
 from torch.nn.parallel import DistributedDataParallel as DDP
 
 
-from soap import SOAP
+from soap_adopt import SOAP
 
 with open(sys.argv[0]) as f:
     code = f.read()
@@ -239,7 +239,7 @@ class GPT(nn.Module):
     def configure_optimizers(self, weight_decay, learning_rate, betas):
         optimizer = CombinedOptimizer([
             torch.optim.AdamW(self.lm_head.parameters(), lr=0.0018, betas=betas, weight_decay=0),
-            SOAP(self.transformer.h.parameters(), lr=learning_rate, betas=(.95, .95), weight_decay=0, precondition_frequency=10)
+            SOAP(self.transformer.h.parameters(), lr=learning_rate, betas=(.95, .95, 0.9), weight_decay=0, precondition_frequency=10)
             #OrthogonalNesterov(self.transformer.h.parameters(), lr=10 * learning_rate, momentum=0.95)
         ])
         return optimizer
@@ -369,7 +369,7 @@ if __name__ == "__main__":
     torch.cuda.set_device(device)
     print(f"using device: {device}")
     master_process = (ddp_rank == 0) # this process will do logging, checkpointing etc.
-    print(f"using SOAP")
+    print(f"using SOAP_ADOPT")
     # load tokens
     train_loader = DistributedDataLoader(args.input_bin, B, T, ddp_rank, ddp_world_size)
     print0(f"Training DataLoader: total number of tokens: {train_loader.ntok_total} across {len(train_loader.files)} files")
